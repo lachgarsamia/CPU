@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduler</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<h1>CPU Scheduler Simulator</h1>
+<p class="h1">By : Lachgar & Baddou</p>
+<div class="main-container">
+    <section class="form1">
+        <form method="POST" action="/" class="form1" >
+
+            <input type="hidden" name="action" value="randomProcesses">
+            <div class="inputForm">
+                <div>
+                    <label for="numberProcesses">Number of processes</label>
+                    <input type="number" name="numberProcesses" min="1" value="3" step="1">
+                </div>
+    
+                <div>
+                    <label for="maxBurst">Max burst</label>
+                    <input type="number" name="maxBurst" min="1" value ="10" step="1">
+                </div>
+    
+                <div>
+                    <label for="minBurst">Min burst</label>
+                    <input type="number" name="minBurst" min="1" value ="2" step="1">
+                </div>
+    
+                <div>
+                    <label for="maxArrivalTime">Max Arrival time</label>
+                    <input type="number" name="maxArrivalTime" min="0" value="0" step="1">
+                </div>
+    
+    
+            </div>
+            <div class="algorithm_choice" id="alg">
+                <div class="algi">
+                    <label for="dropdown">Scheduling algorithm</label>
+                    <select name="dropdown">
+                        <option value="FCFS">First Come First Serve (FCFS)</option>
+                        <option value="SJF">Shortest Job First (SJF)</option>
+                        <option value="Priority">Priority Scheduling</option>
+                        <option value="Round Robin">Round Robin</option>
+                        <option value="Priority Round Robin">Priority Round Robin</option>
+                      </select>
+                      </div>
+    
+                <div id="quantumInput" style="display: none;">
+                    <div>
+                        <label for="quantum">Quantum:</label>
+                        <input type="number" id="quantum" name="quantum" min="1" value="1" step="1">
+                    </div>
+                    <div>
+                        <label for="contextSwitching">Context Switching OverHead:</label>
+                        <input type="number" id="contextSwitching" name="contextSwitching" min="0" value = "0" step="1">
+                    </div>
+                    
+    
+    
+                </div>
+            </div>
+
+    <input type="submit" value="Generate Random Processes" class="inputSubmit">
+        </form>
+        <button id="reset">Reset</button>
+
+
+    </section>
+    
+
+    <h2>Process Informations</h2>
+    <div class="inputResults">
+        <div class="processTable">
+
+            <table id="csvTable">
+                <!-- Table content will be inserted here -->
+            </table>
+
+            <div class="pagination">
+                <button onclick="previousPage()"><</button>
+                <button onclick="nextPage()">></button>
+            </div>
+        </div>
+
+        <div>
+            <canvas id="scatterChart"></canvas>
+        </div>
+
+
+    </div>
+
+    <div id="outputResults">
+
+        <h2>Scheduling timeline</h2>
+        <div class="timeline-container">
+            <div class="timeline"></div>
+            <div class="ruler"></div>
+
+        </div>
+        <h2>Output Table</h2>
+        <div id="processTableOutput">
+
+        </div>
+        <h2>Output Statics</h2>
+        <div class ="statistics">
+
+            <p id="att">Average Turnaround Time : <br> </p>
+            <p id="awt">Average Waiting Time : <br></p>
+            <p id="cpuUtil">CPU utilization : <br></p>
+
+
+        </div>
+        <h2>Output visualization</h2>
+        <p class="h1">Time Distribution Chart</p>
+        <div class="outputCharts">
+
+            <canvas id="myChart1" width="400" height="400"></canvas>
+      <canvas id="myChart2" width="400" height="400"></canvas>
+      <canvas id="myChart3" width="400" height="400"></canvas>
+        </div>
+                <p class="h1">CPU utilization Chart</p>
+              <canvas id="myPieChart" width="400" height="400"></canvas>
+
+
+
+    </div>
+
+
+
+
+
+
+</div>
+</body>
+<script src="{{ url_for('static', filename='js/csvTable.js') }}"></script>
+<script src="{{ url_for('static', filename='js/timeline.js') }}"></script>
+<script src="{{ url_for('static', filename='js/inputSection.js') }}"></script>
+<script src="{{ url_for('static', filename='js/barcharts.js') }}"></script>
+    <script>
+
+        document.getElementById("reset").addEventListener("click", function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/reset", true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    window.location.href = "reset";
+                    console.log("Request sent successfully!");
+                }
+            };
+            xhr.send();
+        });
+
+
+
+        
+    </script>
+    <script>
+        document.getElementById("dropdown").addEventListener("change", function() {
+            var selectedValue = this.value;
+            
+            if (selectedValue === "Round-Robin" || selectedValue === "Priority Round-Robin" || selectedValue === "Round-Robin with Aging") {
+                document.getElementById("quantumInput").style.display = "flex";
+                document.getElementById("alg").style.display="flex";
+    
+            } else   {
+                document.getElementById("quantumInput").style.display = "none";
+               document.getElementById("alg").style.display="block";
+    
+            }
+        });
+
+        
+    </script>
+
+
+<script>
+            function generateRandomBrightColor(i) {
+            const brightColors = [
+                'red', 'blue', 'green', 'orange', 'yellow', 'cyan', 'magenta',
+                'lime', 'pink', 'turquoise', 'gold', 'purple', 'violet', 'skyblue', 'coral',
+                'teal', 'lavender', 'maroon', 'olive', 'navy', 'peach', 'indigo',
+                'tomato', 'orchid', 'slateblue', 'seagreen', 'peru', 'crimson', 'darkorange', 'salmon'
+            ];
+
+            i = i % 30;
+
+            return brightColors[i];
+        }
+    let sum_burst = 0;
+const csvUrl2 = 'static/csv/process_table.csv';
+fetchCSV(csvUrl2)
+  .then(data => {
+let dt = [];
+for (var i = 1;i<data.length;i++){
+    sum_burst += parseInt(data[i][1]);
+    dt.push(data[i][1]);
+}
+
+    var cpu_idle =  Math.abs(sum_burst - parseInt('{{ total }}'));
+    var perc = 100 * sum_burst / (sum_burst + cpu_idle);
+    document.getElementById("cpuUtil").innerHTML += perc + "%";
+      var lbls = dt.map((value, index) => `Process ${index + 1}`);
+
+
+        // Generate colors for each data point
+        const colors = dt.map((value, index) => generateRandomBrightColor(index +1));
+
+        colors.push("black")
+        lbls.push("CPU IDLE")
+        dt.push(cpu_idle)
+
+        // Get canvas element
+        const ctx = document.getElementById('myPieChart').getContext('2d');
+
+        // Create pie chart
+        const myPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: lbls, // Labels for each data point
+                datasets: [{
+                    data: dt,
+                    backgroundColor: colors
+                }]
+            },
+            options: {
+                responsive: false
+            }
+        });
+
+  });
+
+
+
+
+
+
+
+
+
+</script>
+
+
+
+</html>

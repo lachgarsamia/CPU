@@ -7,7 +7,8 @@ import copy
 from collections import deque
 from ProcessClass.process import Process
 
-class RoundRobinPriorityScheduler:
+class PriorityRoundRobinScheduler:
+
     """
     Round Robin with Priority CPU Scheduling Algorithm
     

@@ -9,11 +9,11 @@ import time
 
 # Import the scheduling algorithms and Process class
 from ProcessClass.process import Process
-from Algorithms.FCFS import FCFSScheduler
-from Algorithms.SJF import SJFScheduler
-from Algorithms.PrioritySchedule import PriorityScheduler
-from Algorithms.RR import RoundRobinScheduler
-from Algorithms.RR_Priority import RoundRobinPriorityScheduler
+from schedulers.FCFS import FCFSScheduler
+from schedulers.SJF import SJFScheduler
+from schedulers.PrioritySchedule import PriorityScheduler
+from schedulers.RR import RoundRobinScheduler
+from schedulers.RR_Priority import PriorityRoundRobinScheduler
 
 # Define scheduler types for easy referencing
 SCHEDULERS = {
@@ -43,7 +43,7 @@ SCHEDULERS = {
     },
     "rrp": {
         "name": "Round Robin with Priority",
-        "class": RoundRobinPriorityScheduler,
+        "class": PriorityRoundRobinScheduler,
         "params": ["time_quantum", "aging_factor"],
         "description": "Preemptive scheduler combining priority with Round Robin. Higher priority processes are scheduled first."
     }
@@ -251,43 +251,77 @@ def animation_spinner(seconds: int):
     
     sys.stdout.write('\rScheduler completed!    \n')
 
+
 def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     """Run the selected scheduler with given processes and parameters."""
     if not processes:
         print("No processes to schedule.")
         return
-    
-    # Create a copy of the processes to avoid modifying the original list
+
+    # Select and initialize scheduler
     scheduler_class = SCHEDULERS[scheduler_type]["class"]
     scheduler_name = SCHEDULERS[scheduler_type]["name"]
-    
+
     print(f"\nRunning {scheduler_name} scheduler...")
-    
-    # Create and run the scheduler with appropriate parameters
+
     if scheduler_type in ["fcfs", "sjf", "priority"]:
         scheduler = scheduler_class(processes)
     else:
         scheduler = scheduler_class(processes, **params)
-    
-    # Show animation while "processing"
-    animation_spinner(1.5)
-    
-    # Run the scheduler
+
+    # Animation spinner
+    animation_spinner(5)
+
+    # Run scheduler
     completed_processes = scheduler.run()
-    
-    # Display results
+
+    # Display scheduling results
     scheduler.print_results()
-    
-    # Ask if user wants to see Gantt chart
+
+    # Textual Gantt chart
     if input("\nShow Gantt chart? (y/n): ").lower() == 'y':
         scheduler.print_gantt_chart()
-    
-    # Ask if user wants to see execution log
+
+    # Execution log
     if input("\nShow execution log? (y/n): ").lower() == 'y':
         scheduler.print_execution_log()
-    
-    # Return to continue
+
+    # Save completed schedule
+    if input("\nSave completed schedule to CSV? (y/n): ").lower() == 'y':
+        filename = input("Enter filename to save (without .csv extension): ") + ".csv"
+        try:
+            with open(filename, 'w') as f:
+                f.write("id,arrival_time,burst_time,priority,waiting_time,turnaround_time,completion_time\n")
+                for p in sorted(completed_processes, key=lambda x: x.id):
+                    f.write(f"{p.id},{p.arrival_time},{p.burst_time},{p.priority},{p.waiting_time},{p.turnaround_time},{p.completion_time}\n")
+            print(f"Successfully saved completed processes to {filename}")
+        except Exception as e:
+            print(f"Error saving file: {e}")
+
+    # Matplotlib Gantt chart
+    if input("\nPlot Gantt Chart using matplotlib? (y/n): ").lower() == 'y':
+        try:
+            import matplotlib.pyplot as plt
+
+            fig, ax = plt.subplots()
+            for p in completed_processes:
+                if p.completion_time is not None:
+                    start_time = p.completion_time - p.turnaround_time
+                    ax.barh(f"P{p.id}", p.turnaround_time, left=start_time)
+            ax.set_xlabel("Time")
+            ax.set_title("Gantt Chart")
+
+            # Show plot non-blocking
+            plt.show(block=False)
+            plt.pause(3)  # Show for 3 seconds
+            plt.close()
+
+        except ImportError:
+            print("matplotlib is not installed. Install it using 'pip install matplotlib'.")
+
     input("\nPress Enter to continue...")
+
+
 
 def main():
     """Main application function."""
