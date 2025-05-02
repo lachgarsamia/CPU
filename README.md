@@ -89,7 +89,9 @@ cd OS-Assign-1-CC
 It's recommended to use a virtual environment.
 
 ```bash
-pip install -r requirements.txt
+conda env create -f environment.yml
+
+conda activate OS-ASSIGN_1
 ```
 
 ---
