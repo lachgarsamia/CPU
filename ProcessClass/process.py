@@ -133,3 +133,31 @@ class Process:
             amount (int): Amount to increment the age by. Defaults to 1.
         """
         self.age += amount
+
+
+    def copy(self):
+        """Create a deep copy of the process object."""
+        new_process = Process(
+            id=self.id,
+            burst_time=self.burst_time,
+            priority=self.priority,
+            arrival_time=self.arrival_time
+        )
+        
+        # Copy other attributes if they exist
+        if hasattr(self, 'waiting_time'):
+            new_process.waiting_time = self.waiting_time
+            
+        if hasattr(self, 'turnaround_time'):
+            new_process.turnaround_time = self.turnaround_time
+            
+        if hasattr(self, 'completion_time'):
+            new_process.completion_time = self.completion_time
+            
+        if hasattr(self, 'response_time'):
+            new_process.response_time = self.response_time
+            
+        if hasattr(self, 'remaining_time'):
+            new_process.remaining_time = self.remaining_time
+            
+        return new_process
