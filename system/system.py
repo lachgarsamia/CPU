@@ -18,7 +18,7 @@ class System:
             f.write("id,burst_time,priority,arrival_time\n")
             for i in range(1, number_of_processes + 1):
                 burst_time = random.randint(min_burst, max_burst)
-                priority = random.randint(1, 5)
+                priority = random.randint(1, 5) # Should see how to enter priority
                 arrival_time = random.randint(0, max_arrival_time)
                 process = Process(id=i, burst_time=burst_time, priority=priority, arrival_time=arrival_time)
                 processes.append(process)

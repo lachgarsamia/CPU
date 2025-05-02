@@ -1,4 +1,4 @@
-    // Function to fetch CSV file
+    // Function to fetch CSV
 
 console.log("bvhuejnvkl ")
     document.getElementById("processTableOutput").innerHTML = ""
@@ -37,8 +37,8 @@ function displayCSVAsHTMLTable(csvURL, outputElementId) {
         }
         att /= (csvData.length-1)
         awt /= (csvData.length-1)
-        document.getElementById("att").innerHTML+= att
-        document.getElementById("awt").innerHTML+= awt
+        document.getElementById("att").innerHTML+= att.toFixed(2)
+        document.getElementById("awt").innerHTML+= awt.toFixed(2)
 
       const htmlTable = convertToHTMLTable(csvData);
       document.getElementById(outputElementId).innerHTML += htmlTable;
@@ -49,6 +49,6 @@ function displayCSVAsHTMLTable(csvURL, outputElementId) {
 }
 
 // Example usage:
-const csvURL = 'static/csv/result.csv'; // Replace 'example.csv' with the URL of your CSV file
-const outputElementId = 'processTableOutput'; // Replace 'csvTable' with the ID of the HTML element where you want to display the table
+const csvURL = 'static/csv/result.csv'; 
+const outputElementId = 'processTableOutput'; 
 displayCSVAsHTMLTable(csvURL, outputElementId);

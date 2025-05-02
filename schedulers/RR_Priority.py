@@ -6,6 +6,7 @@ import argparse
 import copy
 from collections import deque
 from ProcessClass.process import Process
+from utils.file_io import write_execution_csv
 
 class PriorityRoundRobinScheduler:
 
@@ -159,6 +160,7 @@ class PriorityRoundRobinScheduler:
         
         # Update the original processes list with the completed processes
         self.processes = completed_processes
+        write_execution_csv(self.gantt_chart)
         return self.processes
     
     def get_statistics(self) -> dict:

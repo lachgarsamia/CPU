@@ -141,10 +141,6 @@ fetch('static/js/csvTable.js')
   .then(response => response.text())
   .then(scriptContent => eval(scriptContent));
 
-fetch('static/js/barcharts.js')
-  .then(response => response.text())
-  .then(scriptContent => eval(scriptContent));
-
 })
 
 

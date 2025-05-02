@@ -6,6 +6,8 @@ import random
 import argparse
 from typing import List, Dict, Type
 import time
+import io
+from contextlib import redirect_stdout
 
 # Import the scheduling algorithms and Process class
 from ProcessClass.process import Process
@@ -48,6 +50,20 @@ SCHEDULERS = {
         "description": "Preemptive scheduler combining priority with Round Robin. Higher priority processes are scheduled first."
     }
 }
+
+class OutputTee:
+    """Class to tee output to both terminal and buffer"""
+    def __init__(self, terminal, buffer):
+        self.terminal = terminal
+        self.buffer = buffer
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.buffer.write(message)
+        
+    def flush(self):
+        self.terminal.flush()
+        self.buffer.flush()
 
 def clear_screen():
     """Clear the terminal screen."""
@@ -122,8 +138,8 @@ def generate_random_processes() -> List[Process]:
     min_burst = get_int_input("Enter minimum burst time: ", 1)
     max_burst = get_int_input("Enter maximum burst time: ", min_burst)
     
-    min_priority = get_int_input("Enter minimum priority (smaller value = higher priority): ", 1)
-    max_priority = get_int_input("Enter maximum priority: ", min_priority)
+    min_priority = get_int_input("Enter maximum priority (smaller value = higher priority): ", 1)
+    max_priority = get_int_input("Enter minimum priority: ", min_priority)
     
     min_arrival = get_int_input("Enter minimum arrival time: ", 0)
     max_arrival = get_int_input("Enter maximum arrival time: ", min_arrival)
@@ -251,13 +267,16 @@ def animation_spinner(seconds: int):
     
     sys.stdout.write('\rScheduler completed!    \n')
 
-
 def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     """Run the selected scheduler with given processes and parameters."""
     if not processes:
         print("No processes to schedule.")
         return
 
+    # Initialize a buffer for the scheduler output
+    scheduler_output = io.StringIO()
+    original_stdout = sys.stdout
+    
     # Select and initialize scheduler
     scheduler_class = SCHEDULERS[scheduler_type]["class"]
     scheduler_name = SCHEDULERS[scheduler_type]["name"]
@@ -272,21 +291,41 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     # Animation spinner
     animation_spinner(5)
 
+    # Start capturing output for scheduler results
+    print(f"\n{'='*80}")
+    print(f"SCHEDULER RESULTS: {scheduler_name}".center(80))
+    print(f"{'='*80}\n")
+    
+    # Switch to capturing to our buffer
+    sys.stdout = OutputTee(original_stdout, scheduler_output)
+    
     # Run scheduler
     completed_processes = scheduler.run()
 
+    # Display process details
+    print("\nProcess Details:")
+    print("-" * 80)
+    print(f"{'ID':<5} {'Arrival':<10} {'Burst':<10} {'Priority':<10} {'Wait':<10} {'Turnaround':<12} {'Completion':<12}")
+    print("-" * 80)
+    for p in sorted(completed_processes, key=lambda x: x.id):
+        print(f"{p.id:<5} {p.arrival_time:<10} {p.burst_time:<10} {p.priority:<10} "
+              f"{p.waiting_time:<10} {p.turnaround_time:<12} {p.completion_time:<12}")
+    print("-" * 80)
+    
     # Display scheduling results
     scheduler.print_results()
 
     # Textual Gantt chart
-    if input("\nShow Gantt chart? (y/n): ").lower() == 'y':
+    show_gantt = input("\nShow Gantt chart? (y/n): ").lower() == 'y'
+    if show_gantt:
         scheduler.print_gantt_chart()
 
     # Execution log
-    if input("\nShow execution log? (y/n): ").lower() == 'y':
+    show_exec_log = input("\nShow execution log? (y/n): ").lower() == 'y'
+    if show_exec_log:
         scheduler.print_execution_log()
 
-    # Save completed schedule
+    # Save completed schedule to CSV
     if input("\nSave completed schedule to CSV? (y/n): ").lower() == 'y':
         filename = input("Enter filename to save (without .csv extension): ") + ".csv"
         try:
@@ -318,10 +357,21 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
 
         except ImportError:
             print("matplotlib is not installed. Install it using 'pip install matplotlib'.")
-
+    
+    # Switch back to original stdout
+    sys.stdout = original_stdout
+    
+    # Ask to save the captured scheduler output
+    if input("\nSave scheduler output to a text file? (y/n): ").lower() == 'y':
+        filename = input("Enter filename to save output (without .txt extension): ") + ".txt"
+        try:
+            with open(filename, 'w') as f:
+                f.write(scheduler_output.getvalue())
+            print(f"Successfully saved scheduler output to {filename}")
+        except Exception as e:
+            print(f"Error saving file: {e}")
+    
     input("\nPress Enter to continue...")
-
-
 
 def main():
     """Main application function."""
@@ -357,8 +407,12 @@ def main():
                 
                 if input_choice == 1:
                     processes = generate_random_processes()
+                    if processes and input("Save these processes to file? (y/n): ").lower() == 'y':
+                        save_processes_to_file(processes)
                 elif input_choice == 2:
                     processes = enter_processes_manually()
+                    if processes and input("Save these processes to file? (y/n): ").lower() == 'y':
+                        save_processes_to_file(processes)
                 elif input_choice == 3:
                     new_processes = load_processes_from_file()
                     if new_processes:
@@ -366,8 +420,6 @@ def main():
                 elif input_choice == 4:
                     continue
                 
-                if processes and input("Save these processes to file? (y/n): ").lower() == 'y':
-                    save_processes_to_file(processes)
             
             if not processes:
                 print("No processes available. Please generate or input processes first.")

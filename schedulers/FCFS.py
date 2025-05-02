@@ -5,6 +5,7 @@ import csv
 import argparse
 import copy
 from ProcessClass.process import Process
+from utils.file_io import write_execution_csv
 
 
 class FCFSScheduler:
@@ -61,8 +62,9 @@ class FCFSScheduler:
             log_entry = f"Time {self.current_time}: Completed Process {process.id}"
             self.execution_log.append(log_entry)
 
+            write_execution_csv(self.gantt_chart)
         return self.processes
-    
+
 
     def get_statistics(self) -> dict:
         """

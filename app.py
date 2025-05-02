@@ -17,9 +17,7 @@ SCHEDULER_MAP = {
     "Priority": PriorityScheduler,
     "Priority Scheduling": PriorityScheduler,
     "Round Robin": RoundRobinScheduler,
-    "Round-Robin": RoundRobinScheduler,  # <-- ADD THIS LINE
     "Priority Round Robin": PriorityRoundRobinScheduler,
-    "Priority-Round-Robin": PriorityRoundRobinScheduler  # <-- ADD THIS TOO JUST IN CASE
 }
 
 
@@ -54,12 +52,12 @@ def index():
                 scheduler = SCHEDULER_MAP[algo](processes)
 
             elif algo == "Round Robin":
-                quantum = int(request.form.get("quantum", 2))  # ✅ FIX
+                quantum = int(request.form.get("quantum", 1))  # ✅ FIX
                 scheduler = SCHEDULER_MAP[algo](processes, time_quantum=quantum)
 
             elif algo == "Priority Round Robin":
-                quantum = int(request.form.get("quantum", 2))  # ✅ FIX
-                aging = int(request.form.get("aging", 2))      # ✅ FIX
+                quantum = int(request.form.get("quantum", 1))  # ✅ FIX
+                aging = int(request.form.get("aging", 1))      # ✅ FIX
                 scheduler = SCHEDULER_MAP[algo](processes, time_quantum=quantum, aging_factor=aging)
 
             if scheduler:
@@ -67,7 +65,6 @@ def index():
             else:
                 return jsonify({'error': 'Invalid Scheduler selected'}), 400
 
-            completed_processes = scheduler.run()
             syst = System(processes)
             syst.save_processes_csv("static/csv/result.csv", completed_processes)
             syst.system_to_csv("static/csv/system.txt")

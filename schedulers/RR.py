@@ -6,6 +6,7 @@ import argparse
 import copy
 from collections import deque
 from ProcessClass.process import Process
+from utils.file_io import write_execution_csv
 
 class RoundRobinScheduler:
     """
@@ -112,6 +113,8 @@ class RoundRobinScheduler:
                 current_process.state = "READY"
         
         self.processes = completed_processes
+
+        write_execution_csv(self.gantt_chart)
         return self.processes
     
     def get_statistics(self) -> dict:
