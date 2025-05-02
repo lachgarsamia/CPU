@@ -29,7 +29,9 @@ This repository provides two ways to interact with the simulator:
 │       ├── result.csv
 │       ├── SpecialFile.csv
 │       └── system.txt
-│   ├── img
+│   ├── img             # Images that show how both aproaches run
+│       ├── Main        # Terminal images
+│       └── App         # UI images
 │   └── js/             # JavaScript code related to the functionalities of UI
 │       ├── csvTable.js
 │       ├── inputSection.js
@@ -52,6 +54,8 @@ This repository provides two ways to interact with the simulator:
 │   └── input.py/
 ├── utils/              # Helper modules (e.g., Gantt chart plotting)
 │   └── file_io.py
+├── test_processes.csv  # Test processes
+├── testing.ipynb       # Notebook with run examples, and edge case testing (algorithms with some edge cases that test the robustness of the code)         
 └── README.md           # This file
 ```
 
@@ -128,6 +132,8 @@ The app will run on [http://127.0.0.1:8080](http://127.0.0.1:8080). Open it in y
 * The web app uses Flask sessions for temporary storage and `Matplotlib` for visualization.
 * The scheduler logic is decoupled for reuse in both the CLI and UI.
 * This tool is ideal for Operating Systems coursework or scheduling research.
+
+* To test the `main.py` with a `csv` entry, we kept an example of processes in `test_processes.csv`, else you can just run the code and generate / enter manually the processes and then save them in a `csv` for later use. You can also save all outputs (log of scheduling, gant charts, …)
 
 ---
 ## About:
