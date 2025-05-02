@@ -129,3 +129,13 @@ The app will run on [http://127.0.0.1:8080](http://127.0.0.1:8080). Open it in y
 * The scheduler logic is decoupled for reuse in both the CLI and UI.
 * This tool is ideal for Operating Systems coursework or scheduling research.
 
+---
+## About:
+This project comes in the context of an assignment for the class of Operating Systems @UM6P - College of Computing, where we get our hands on exercise of implementing the most famous scheduling algorithms in order to see first-hand how they work, far from the theory.
+
+Project done by:
+- Mounia BADDOU (github: @MTheCreator): Mounia.BADDOU@um6p.ma
+- Samia LACHGAR (github: @lachgarsamia): Samia.LACHGAR@um6p.ma
+- Supervised by: Prof. Youssef IRAQI, UM6P-CC
+
+Academic Year: 2024 / 2025, Mohammed VI Polytechnic University, College of Computing.
