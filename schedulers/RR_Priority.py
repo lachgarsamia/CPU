@@ -9,15 +9,13 @@ from ProcessClass.process import Process
 from utils.file_io import write_execution_csv
 
 class PriorityRoundRobinScheduler:
-
     """
-    Round Robin with Priority CPU Scheduling Algorithm
+    Priority-based Round Robin CPU Scheduling Algorithm
     
-    Combines priority scheduling with Round Robin. Processes are organized into priority 
-    queues, with higher priority processes scheduled first. Within each priority level, 
-    processes execute in Round Robin fashion with a fixed time quantum.
-    
-    This is a preemptive algorithm.
+    Combines Round Robin with priority considerations:
+    - Processes are organized in priority levels
+    - Within each priority level, Round Robin scheduling is applied
+    - Higher priority processes always execute before lower priority ones
     
     Attributes:
         processes (List[Process]): List of processes to schedule.
@@ -25,29 +23,25 @@ class PriorityRoundRobinScheduler:
         current_time (int): Current simulation time.
         execution_log (List[str]): Log to track execution history.
         gantt_chart (List[tuple]): For visualizing the execution sequence.
-        aging_factor (int): Number of time units after which a process's priority increases.
     """
     
-    def __init__(self, processes: List[Process], time_quantum: int = 2, aging_factor: int = 10):
+    def __init__(self, processes: List[Process], time_quantum: int = 2):
         """
-        Initialize the Round Robin with Priority scheduler.
+        Initialize the Priority Round Robin scheduler with a list of processes.
         
         Args:
             processes: List of Process objects to schedule
             time_quantum: Time slice allocated to each process
-            aging_factor: Number of time units after which a process's priority increases
         """
-        # Create deep copies of processes to avoid modifying the originals
         self.processes = copy.deepcopy(processes)
         self.time_quantum = time_quantum
-        self.aging_factor = aging_factor
         self.current_time = 0
-        self.execution_log = []  # Log to track execution history
-        self.gantt_chart = []    # For visualizing the execution sequence
+        self.execution_log = []  
+        self.gantt_chart = []    
         
     def run(self) -> List[Process]:
         """
-        Run the Round Robin with Priority scheduling algorithm.
+        Run the Priority Round Robin scheduling algorithm.
         
         Returns:
             List of processes after scheduling with calculated metrics
@@ -55,111 +49,112 @@ class PriorityRoundRobinScheduler:
         if not self.processes:
             return []
             
-        # Sort processes by arrival time initially
         self.processes.sort(key=lambda p: p.arrival_time)
         
-        # Reset current time to the arrival time of the first process
+        # Initialize current time to the earliest arrival
         self.current_time = self.processes[0].arrival_time
         
         remaining_processes = copy.deepcopy(self.processes)
         completed_processes = []
         
-        # Ready queues for each priority level
+        # Instead of a single queue, maintain priority-based queues
         priority_queues = {}
         
-        # Add the first arrived process to the appropriate priority queue
-        first_process = remaining_processes[0]
-        if first_process.priority not in priority_queues:
-            priority_queues[first_process.priority] = deque()
-        priority_queues[first_process.priority].append(first_process)
+        # Add ALL processes that arrive at the initial time to their priority queues
+        for process in remaining_processes:
+            if process.arrival_time <= self.current_time:
+                if process.priority not in priority_queues:
+                    priority_queues[process.priority] = deque()
+                priority_queues[process.priority].append(process)
         
-        while any(priority_queues.values()) or any(p for p in remaining_processes if p not in completed_processes and not any(p in q for q in priority_queues.values())):
-            # If all queues are empty, find the next arriving process
-            if not any(priority_queues.values()):
+        while priority_queues or any(p for p in remaining_processes if p not in completed_processes):
+            # Handle idle time when no processes are ready
+            if not priority_queues:
                 next_processes = [p for p in remaining_processes if p not in completed_processes]
                 next_arrival = min(p.arrival_time for p in next_processes)
                 
-                # Advance time to next arrival
                 self.gantt_chart.append(("IDLE", self.current_time, next_arrival))
                 self.execution_log.append(f"Time {self.current_time}: CPU idle until {next_arrival}")
                 self.current_time = next_arrival
                 
-                # Add all processes that arrive at this time to their priority queues
+                # Add ALL processes that arrive at this new time to their priority queues
                 for p in next_processes:
-                    if p.arrival_time == self.current_time:
+                    if p.arrival_time <= self.current_time and p not in completed_processes:
                         if p.priority not in priority_queues:
                             priority_queues[p.priority] = deque()
                         priority_queues[p.priority].append(p)
                 continue
             
-            # Get the highest priority (lowest value) non-empty queue
-            priority = min([p for p in priority_queues if priority_queues[p]])
+            # Get the highest priority (lowest number = highest priority)
+            highest_priority = min(priority_queues.keys())
+            current_queue = priority_queues[highest_priority]
             
-            # Get the next process from the priority queue
-            current_process = priority_queues[priority].popleft()
+            # Get next process from the highest priority queue
+            current_process = current_queue.popleft()
             
-            # Set response time if this is the first time the process runs
+            # Calculate response time if first time running
             if current_process.response_time is None and current_process.cpu_time_acquired == 0:
                 current_process.response_time = self.current_time - current_process.arrival_time
                 
-            # Calculate waiting time since last execution
-            if current_process.cpu_time_acquired > 0:  # Not the first execution
-                wait_time = self.current_time - current_process.last_running_time
+            # Update waiting time
+            if current_process.cpu_time_acquired > 0:
+                wait_time = self.current_time - current_process.arrival_time - current_process.burst_time
                 current_process.waiting_time += wait_time
-                
-                # Apply aging - if process has been waiting too long, increase its priority
-                if wait_time >= self.aging_factor:
-                    old_priority = current_process.priority
-                    if current_process.priority > 1:  # Don't increase beyond highest priority (1)
-                        current_process.priority -= 1
-                        self.execution_log.append(f"Time {self.current_time}: Process {current_process.id} priority increased from {old_priority} to {current_process.priority} due to aging")
             
-            # Log process execution start
+            # Log execution
             log_entry = f"Time {self.current_time}: Running Process {current_process.id} "
-            log_entry += f"(remaining: {current_process.remaining_time}, priority: {current_process.priority}, quantum: {self.time_quantum})"
+            log_entry += f"(priority: {current_process.priority}, remaining: {current_process.remaining_time}, quantum: {self.time_quantum})"
             self.execution_log.append(log_entry)
             
-            # Execute process for the time quantum or until completion
+            # Execute the process
             current_process.state = "RUNNING"
             time_slice = min(self.time_quantum, current_process.remaining_time)
             time_used = current_process.execute(time_slice)
             
-            # Record in Gantt chart
+            # Update Gantt chart
             self.gantt_chart.append((current_process.id, self.current_time, self.current_time + time_used))
             
-            # Update the last running time
             current_process.last_running_time = self.current_time + time_used
-            
-            # Advance time
             self.current_time += time_used
             
-            # Check for newly arrived processes during this time slice
+            # Check for new arrivals during this time slice and add them to appropriate priority queues
             for p in remaining_processes:
-                if (p.arrival_time > current_process.last_running_time - time_used and 
-                    p.arrival_time <= self.current_time and 
+                if (p.arrival_time <= self.current_time and 
                     p not in completed_processes and 
-                    not any(p in q for q in priority_queues.values()) and
                     p != current_process):
-                    if p.priority not in priority_queues:
-                        priority_queues[p.priority] = deque()
-                    priority_queues[p.priority].append(p)
-                    self.execution_log.append(f"Time {p.arrival_time}: Process {p.id} arrived with priority {p.priority}")
+                    
+                    # Check if this process is already in any queue
+                    in_queue = False
+                    for priority, queue in priority_queues.items():
+                        if p in queue:
+                            in_queue = True
+                            break
+                    
+                    if not in_queue:
+                        if p.priority not in priority_queues:
+                            priority_queues[p.priority] = deque()
+                        priority_queues[p.priority].append(p)
             
-            # Check if the process is completed
+            # Handle process completion or return to ready queue
             if current_process.is_completed():
                 current_process.complete(self.current_time)
                 log_entry = f"Time {self.current_time}: Completed Process {current_process.id}"
                 self.execution_log.append(log_entry)
                 completed_processes.append(current_process)
             else:
-                # Process not completed, put it back in its priority queue
+                # Put back in the appropriate priority queue
                 if current_process.priority not in priority_queues:
                     priority_queues[current_process.priority] = deque()
                 priority_queues[current_process.priority].append(current_process)
                 current_process.state = "READY"
+            
+            # Clean up empty queues
+            empty_priorities = [p for p, q in priority_queues.items() if not q]
+            for p in empty_priorities:
+                del priority_queues[p]
         
-        # Update the original processes list with the completed processes
         self.processes = completed_processes
+
         write_execution_csv(self.gantt_chart)
         return self.processes
     
@@ -201,17 +196,13 @@ class PriorityRoundRobinScheduler:
             return
             
         print("\nGantt Chart:")
-        print("-" * 50)
+        print("-" * 60)
         
         for proc_id, start_time, end_time in self.gantt_chart:
-            duration = end_time - start_time
-            if proc_id == "IDLE":
-                chart_bar = f"| {'IDLE' + ' ' * duration} "
-            else:
-                chart_bar = f"| P{proc_id}" + " " * duration + " "
-            print(f"Time {start_time:<3} {chart_bar}| Time {end_time:<3}")
+            proc_label = f"P{proc_id}" if proc_id != "IDLE" else "IDLE"
+            print(f"Time {start_time:<3} | {proc_label:<5} | Time {end_time:<3}")
             
-        print("-" * 50)
+        print("-" * 60)
     
     def print_execution_log(self) -> None:
         """Print the execution log."""
@@ -220,10 +211,10 @@ class PriorityRoundRobinScheduler:
             return
             
         print("\nExecution Log:")
-        print("-" * 80)
+        print("-" * 90)
         for entry in self.execution_log:
             print(entry)
-        print("-" * 80)
+        print("-" * 90)
     
     def print_results(self) -> None:
         """Print detailed results of the scheduling."""
@@ -231,18 +222,15 @@ class PriorityRoundRobinScheduler:
             print("No processes to display results for.")
             return
             
-        # Print process details
         print("\nProcess Details:")
         print("-" * 100)
         print(f"{'ID':<5} {'Burst Time':<12} {'Priority':<10} {'Arrival':<10} {'Waiting':<10} {'Response':<10} {'Turnaround':<12} {'Completion':<12}")
         print("-" * 100)
         
-        # Sort by process ID for display
         sorted_processes = sorted(self.processes, key=lambda p: p.id)
         for p in sorted_processes:
             print(f"{p.id:<5} {p.burst_time:<12} {p.priority:<10} {p.arrival_time:<10} {p.waiting_time:<10} {p.response_time:<10} {p.turnaround_time:<12} {p.completion_time:<12}")
         
-        # Print statistics
         stats = self.get_statistics()
         print("\nScheduling Statistics:")
         print("-" * 50)
@@ -252,23 +240,3 @@ class PriorityRoundRobinScheduler:
         print(f"Total Execution Time    : {stats['total_execution_time']} time units")
         print(f"Throughput              : {stats['throughput']:.4f} processes/time unit")
         print(f"Time Quantum            : {self.time_quantum} time units")
-        print(f"Aging Factor            : {self.aging_factor} time units")
-
-
-# Simple process generator function for demonstration
-def generate_test_processes(num_processes: int = 5, seed: int = None) -> List[Process]:
-    """Generate test processes for demonstration."""
-    if seed is not None:
-        random.seed(seed)
-        
-    processes = []
-    for i in range(1, num_processes + 1):
-        processes.append(Process(
-            id=i,
-            burst_time=random.randint(1, 10),
-            priority=random.randint(1, 5),
-            arrival_time=random.randint(0, 20)
-        ))
-    return processes
-
-

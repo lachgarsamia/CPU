@@ -61,7 +61,8 @@ class PriorityScheduler:
                 self.current_time = next_arrival
                 continue
             
-            selected_process = min(available_processes, key=lambda p: (p.priority, p.id))
+            selected_process = min(available_processes, key=lambda p: (p.priority, p.arrival_time, p.id))
+
             
             selected_process.state = "READY"
             selected_process.last_running_time = max(selected_process.arrival_time, self.current_time)
@@ -196,3 +197,4 @@ def generate_test_processes(num_processes: int = 5, seed: int = None) -> List[Pr
         ))
     return processes
 
+ 

@@ -1,0 +1,4 @@
+id,burst_time,priority,arrival_time,waiting_time,turnaround_time,completion_time
+2,10,5,0,0,10,10
+1,5,3,1,9,14,15
+3,4,4,1,14,18,19

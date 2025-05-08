@@ -27,62 +27,66 @@ class SJFScheduler:
         self.current_time = 0
         self.execution_log = []  
         self.gantt_chart = []    
-        
+    
+   
     def run(self) -> List[Process]:
         """
         Run the SJF scheduling algorithm.
-        
+
         Returns:
             List of processes after scheduling with calculated metrics
         """
         if not self.processes:
             return []
-            
+
         self.processes.sort(key=lambda p: p.arrival_time)
-        
         self.current_time = self.processes[0].arrival_time
-        
+
         remaining_processes = copy.deepcopy(self.processes)
         completed_processes = []
-        
+
         while remaining_processes:
             available_processes = [p for p in remaining_processes if p.arrival_time <= self.current_time]
-            
+
             if not available_processes:
                 next_arrival = min(p.arrival_time for p in remaining_processes)
                 self.gantt_chart.append(("IDLE", self.current_time, next_arrival))
                 self.execution_log.append(f"Time {self.current_time}: CPU idle until {next_arrival}")
                 self.current_time = next_arrival
                 continue
-            
-            selected_process = min(available_processes, key=lambda p: p.burst_time)
-            
+
+            selected_process = min(available_processes, key=lambda p: (p.burst_time, p.arrival_time))
+
+
             selected_process.state = "READY"
             selected_process.last_running_time = max(selected_process.arrival_time, self.current_time)
-            
             selected_process.waiting_time = self.current_time - selected_process.arrival_time
-            
+
             log_entry = f"Time {self.current_time}: Starting Process {selected_process.id} (burst time: {selected_process.burst_time})"
             self.execution_log.append(log_entry)
-            
-            time_used = selected_process.execute(selected_process.burst_time)
-            
-            self.gantt_chart.append((selected_process.id, self.current_time, self.current_time + time_used))
-            
-            self.current_time += time_used
-            
-            selected_process.complete(self.current_time)
-            
+
+            start_time = self.current_time
+            end_time = start_time + selected_process.burst_time
+
+            self.gantt_chart.append((selected_process.id, start_time, end_time))
+            self.current_time = end_time
+
+            selected_process.completion_time = self.current_time
+            selected_process.turnaround_time = selected_process.completion_time - selected_process.arrival_time
+
             log_entry = f"Time {self.current_time}: Completed Process {selected_process.id}"
             self.execution_log.append(log_entry)
-            
+
             remaining_processes.remove(selected_process)
             completed_processes.append(selected_process)
-        
+
         self.processes = completed_processes
+
+
 
         write_execution_csv(self.gantt_chart)
         return self.processes
+
     
     def get_statistics(self) -> dict:
         """
