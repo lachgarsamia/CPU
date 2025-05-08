@@ -84,17 +84,17 @@ def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def print_header():
-    print(f"\n{Colors.HEADER}{'=' * 80}{Colors.END}")
-    print(f"{Colors.BOLD}CPU SCHEDULING ALGORITHM VISUALIZER{Colors.END}".center(80))
-    print(f"{Colors.HEADER}{'=' * 80}{Colors.END}")
+    print(f"\n{'=' * 80}")
+    print(f"CPU SCHEDULING ALGORITHM VISUALIZER".center(80))
+    print(f"{'=' * 80}")
 
 def print_menu():
-    print(f"\n{Colors.BLUE}Available Scheduling Algorithms:{Colors.END}")
+    print(f"\nAvailable Scheduling Algorithms:")
     print("-" * 50)
     for idx, (key, value) in enumerate(SCHEDULERS.items(), 1):
-        print(f"{Colors.GREEN}{idx}. {value['name']} ({key}){Colors.END}")
+        print(f"{idx}. {value['name']} ({key})")
         print(f"   {value['description']}")
-    print(f"\n{Colors.BLUE}Other Options:{Colors.END}")
+    print(f"\nOther Options:")
     print(f"{len(SCHEDULERS) + 1}. Compare All Algorithms")
     print(f"{len(SCHEDULERS) + 2}. Exit")
     print(f"Or type 'q' to quit")
@@ -103,25 +103,25 @@ def print_menu():
 def get_int_input(prompt: str, min_val: int = None, max_val: int = None) -> int:
     while True:
         try:
-            value = input(f"{Colors.BLUE}{prompt}{Colors.END}").strip()
+            value = input(f"{prompt}").strip()
             if value.lower() in ['q', 'quit']:
-                print(f"\n{Colors.GREEN}Exiting program. Goodbye!{Colors.END}")
+                print(f"\nExiting program. Goodbye!")
                 sys.exit(0)
             value = int(value)
             if min_val is not None and value < min_val:
-                print(f"{Colors.WARNING}Value must be at least {min_val}.{Colors.END}")
+                print(f"Value must be at least {min_val}.")
                 continue
             if max_val is not None and value > max_val:
-                print(f"{Colors.WARNING}Value must be at most {max_val}.{Colors.END}")
+                print(f"Value must be at most {max_val}.")
                 continue
             return value
         except ValueError:
-            print(f"{Colors.FAIL}Please enter a valid integer or 'q' to quit.{Colors.END}")
+            print(f"Please enter a valid integer or 'q' to quit.")
 
 def get_string_input(prompt: str) -> str:
-    value = input(f"{Colors.BLUE}{prompt}{Colors.END}").strip()
+    value = input(f"{prompt}").strip()
     if value.lower() in ['q', 'quit']:
-        print(f"\n{Colors.GREEN}Exiting program. Goodbye!{Colors.END}")
+        print(f"\nExiting program. Goodbye!")
         sys.exit(0)
     return value
 
@@ -135,7 +135,7 @@ def get_scheduler_params(scheduler_type: str) -> dict:
     return params
 
 def process_input_options():
-    print(f"\n{Colors.BLUE}Process Input Options:{Colors.END}")
+    print(f"\nProcess Input Options:")
     print("1. Generate random processes")
     print("2. Enter processes manually")
     print("3. Load processes from file")
@@ -168,7 +168,7 @@ def enter_processes_manually() -> List[Process]:
     num_processes = get_int_input("Number of processes [1+]: ", 1)
     processes = []
     for i in range(1, num_processes + 1):
-        print(f"\n{Colors.BLUE}Process {i}:{Colors.END}")
+        print(f"\nProcess {i}:")
         burst_time = get_int_input("Burst time [1+]: ", 1)
         priority = get_int_input("Priority [1+]: ", 1)
         arrival_time = get_int_input("Arrival time [0+]: ", 0)
@@ -176,39 +176,64 @@ def enter_processes_manually() -> List[Process]:
     return processes
 
 def load_processes_from_file() -> List[Process]:
-    filename = get_string_input("Enter CSV file path: ")
+    """Load processes from a CSV file, skipping header row if present."""
+    filename = get_string_input("Enter the CSV file path: ")
+
     try:
         processes = []
         with open(filename, 'r') as file:
-            for line_num, line in enumerate(file, 1):
+            lines = file.readlines()
+            if not lines:
+                print("File is empty.")
+                return None
+            
+            # Check for header row
+            start_line = 0
+            first_line = lines[0].strip().split(',')
+            if first_line and first_line[0].lower() in ['id', 'pid']:
+                print("Skipping header row.")
+                start_line = 1
+            
+            for line_num, line in enumerate(lines[start_line:], start_line + 1):
                 try:
                     parts = line.strip().split(',')
                     if len(parts) < 4:
-                        print(f"{Colors.WARNING}Line {line_num}: Insufficient data - skipping{Colors.END}")
+                        print(f"Line {line_num}: Insufficient data - skipping")
                         continue
+                    
+                    proc_id = int(parts[0])
+                    burst_time = int(parts[1])
+                    priority = int(parts[2])
+                    arrival_time = int(parts[3])
+                    
                     processes.append(Process(
-                        id=int(parts[0]),
-                        burst_time=int(parts[1]),
-                        priority=int(parts[2]),
-                        arrival_time=int(parts[3])
+                        id=proc_id,
+                        burst_time=burst_time,
+                        priority=priority,
+                        arrival_time=arrival_time
                     ))
                 except (ValueError, IndexError) as e:
-                    print(f"{Colors.WARNING}Error parsing line {line_num}: {e}{Colors.END}")
+                    print(f"Error parsing line {line_num}: {e}")
+                    continue
+        
         if not processes:
-            print(f"{Colors.FAIL}No valid processes found in file.{Colors.END}")
+            print("No valid processes found in file.")
             return None
-        print(f"{Colors.GREEN}Successfully loaded {len(processes)} processes.{Colors.END}")
+        
+        print(f"Successfully loaded {len(processes)} processes.")
         return processes
+
     except FileNotFoundError:
-        print(f"{Colors.FAIL}File not found: {filename}{Colors.END}")
+        print(f"File not found: {filename}")
         return None
     except Exception as e:
-        print(f"{Colors.FAIL}Error loading file: {e}{Colors.END}")
+        print(f"Error loading file: {e}")
         return None
+
 
 def save_processes_to_file(processes: List[Process]):
     if not processes:
-        print(f"{Colors.WARNING}No processes to save.{Colors.END}")
+        print(f"No processes to save.")
         return
     filename = get_string_input("Enter filename (CSV): ") + ".csv"
     try:
@@ -216,15 +241,15 @@ def save_processes_to_file(processes: List[Process]):
             file.write("id,burst_time,priority,arrival_time\n")
             for p in processes:
                 file.write(f"{p.id},{p.burst_time},{p.priority},{p.arrival_time}\n")
-        print(f"{Colors.GREEN}Successfully saved {len(processes)} processes to {filename}{Colors.END}")
+        print(f"Successfully saved {len(processes)} processes to {filename}")
     except Exception as e:
-        print(f"{Colors.FAIL}Error saving file: {e}{Colors.END}")
+        print(f"Error saving file: {e}")
 
 def display_processes(processes: List[Process]):
     if not processes:
-        print(f"{Colors.WARNING}No processes to display.{Colors.END}")
+        print(f"No processes to display.")
         return
-    print(f"\n{Colors.BLUE}Process List:{Colors.END}")
+    print(f"\nProcess List:")
     print("-" * 60)
     print(f"{'ID':<5} {'Burst':<8} {'Priority':<10} {'Arrival':<10}")
     print("-" * 60)
@@ -243,11 +268,11 @@ def progress_bar(seconds: int):
         sys.stdout.write(f'\rRunning scheduler [{bar}] {int(progress * 100)}%')
         sys.stdout.flush()
         time.sleep(0.1)
-    sys.stdout.write(f'\r{Colors.GREEN}Scheduler completed!{" " * 50}{Colors.END}\n')
+    sys.stdout.write(f'\rScheduler completed!{" " * 50}\n')
 
 def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     if not processes:
-        print(f"{Colors.WARNING}No processes to schedule.{Colors.END}")
+        print(f"No processes to schedule.")
         return None
 
     scheduler_output = io.StringIO()
@@ -255,7 +280,7 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     scheduler_class = SCHEDULERS[scheduler_type]["class"]
     scheduler_name = SCHEDULERS[scheduler_type]["name"]
     
-    print(f"\n{Colors.BLUE}Running {scheduler_name}...{Colors.END}")
+    print(f"\nRunning {scheduler_name}...")
     scheduler_params = {k: v for k, v in params.items() if k in SCHEDULERS[scheduler_type]["params"]}
     is_interactive = params.get("interactive", True)
 
@@ -277,11 +302,11 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
         "completed_processes": completed_processes
     }
 
-    print(f"\n{Colors.HEADER}{'='*80}{Colors.END}")
-    print(f"{Colors.BOLD}Results: {scheduler_name}{Colors.END}".center(80))
-    print(f"{Colors.HEADER}{'='*80}{Colors.END}\n")
+    print(f"\n{'='*80}")
+    print(f"Results: {scheduler_name}".center(80))
+    print(f"{'='*80}\n")
     
-    print(f"{Colors.BLUE}Process Details:{Colors.END}")
+    print(f"Process Details:")
     print("-" * 70)
     print(f"{'ID':<5} {'Arr':<6} {'Burst':<7} {'Prio':<6} {'Wait':<7} {'Turn':<7} {'Comp':<7}")
     print("-" * 70)
@@ -290,7 +315,7 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
               f"{p.waiting_time:<7} {p.turnaround_time:<7} {p.completion_time:<7}")
     print("-" * 70)
 
-    print(f"\n{Colors.BLUE}Statistics:{Colors.END}")
+    print(f"\nStatistics:")
     print("-" * 50)
     print(f"Avg Waiting Time   : {avg_waiting_time:.2f} units")
     print(f"Avg Turnaround Time: {avg_turnaround_time:.2f} units")
@@ -318,9 +343,9 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
                     f.write("id,arrival_time,burst_time,priority,waiting_time,turnaround_time,completion_time\n")
                     for p in sorted(completed_processes, key=lambda x: x.id):
                         f.write(f"{p.id},{p.arrival_time},{p.burst_time},{p.priority},{p.waiting_time},{p.turnaround_time},{p.completion_time}\n")
-                print(f"{Colors.GREEN}Saved to {filename}{Colors.END}")
+                print(f"Saved to {filename}")
             except Exception as e:
-                print(f"{Colors.FAIL}Error saving file: {e}{Colors.END}")
+                print(f"Error saving file: {e}")
 
         if get_string_input("Save Gantt chart as PNG? (y/n): ").lower() == 'y':
             try:
@@ -335,29 +360,29 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
                 plot_filename = f"gantt_{uuid.uuid4().hex[:8]}.png"
                 plt.savefig(plot_filename, bbox_inches='tight')
                 plt.close()
-                print(f"{Colors.GREEN}Gantt chart saved as {plot_filename}{Colors.END}")
+                print(f"Gantt chart saved as {plot_filename}")
             except Exception as e:
-                print(f"{Colors.FAIL}Error generating plot: {e}{Colors.END}")
+                print(f"Error generating plot: {e}")
 
         if get_string_input("Save output to text file? (y/n): ").lower() == 'y':
             filename = get_string_input("Filename (no .txt): ") + ".txt"
             try:
                 with open(filename, 'w') as f:
                     f.write(scheduler_output.getvalue())
-                print(f"{Colors.GREEN}Saved output to {filename}{Colors.END}")
+                print(f"Saved output to {filename}")
             except Exception as e:
-                print(f"{Colors.FAIL}Error saving file: {e}{Colors.END}")
+                print(f"Error saving file: {e}")
 
-        input(f"\n{Colors.BLUE}Press Enter to continue...{Colors.END}")
+        input(f"\nPress Enter to continue...")
     
     return metrics
 
 def compare_all_schedulers(processes: List[Process]):
     if not processes:
-        print(f"{Colors.WARNING}No processes to schedule.{Colors.END}")
+        print(f"No processes to schedule.")
         return
     
-    print(f"\n{Colors.BLUE}Comparing all scheduling algorithms...{Colors.END}")
+    print(f"\nComparing all scheduling algorithms...")
     all_metrics = {}
     
     time_quantum = get_int_input("Time quantum for Round Robin [default=2]: ", 1) or 2
@@ -375,11 +400,11 @@ def compare_all_schedulers(processes: List[Process]):
             if metrics:
                 all_metrics[scheduler_type] = metrics
         except Exception as e:
-            print(f"{Colors.FAIL}Error running {scheduler_info['name']}: {e}{Colors.END}")
+            print(f"Error running {scheduler_info['name']}: {e}")
     
     clear_screen()
     print_header()
-    print(f"\n{Colors.BLUE}Performance Comparison{Colors.END}")
+    print(f"\nPerformance Comparison")
     print("=" * 80)
     print(f"{'Algorithm':<20} {'Avg Wait':<12} {'Avg Turn':<12} {'Max Comp':<12}")
     print("-" * 80)
@@ -407,9 +432,9 @@ def compare_all_schedulers(processes: List[Process]):
             plot_filename = f"gantt_comparison_{uuid.uuid4().hex[:8]}.png"
             plt.savefig(plot_filename, bbox_inches='tight')
             plt.close()
-            print(f"{Colors.GREEN}Comparative Gantt chart saved as {plot_filename}{Colors.END}")
+            print(f"Comparative Gantt chart saved as {plot_filename}")
         except Exception as e:
-            print(f"{Colors.FAIL}Error generating plot: {e}{Colors.END}")
+            print(f"Error generating plot: {e}")
     
     if get_string_input("Save comparison to CSV? (y/n): ").lower() == 'y':
         filename = get_string_input("Filename (no .csv): ") + ".csv"
@@ -419,11 +444,11 @@ def compare_all_schedulers(processes: List[Process]):
                 for scheduler_type, metrics in all_metrics.items():
                     name = SCHEDULERS[scheduler_type]["name"]
                     f.write(f"{name},{metrics['avg_waiting_time']:.2f},{metrics['avg_turnaround_time']:.2f},{metrics['max_completion_time']}\n")
-            print(f"{Colors.GREEN}Saved comparison to {filename}{Colors.END}")
+            print(f"Saved comparison to {filename}")
         except Exception as e:
-            print(f"{Colors.FAIL}Error saving file: {e}{Colors.END}")
+            print(f"Error saving file: {e}")
     
-    input(f"\n{Colors.BLUE}Press Enter to continue...{Colors.END}")
+    input(f"\nPress Enter to continue...")
 
 def main():
     processes = None
@@ -432,28 +457,28 @@ def main():
         print_header()
         
         if processes:
-            print(f"\n{Colors.GREEN}{len(processes)} processes loaded{Colors.END}")
+            print(f"\n{len(processes)} processes loaded")
             if get_string_input("View processes? (y/n): ").lower() == 'y':
                 display_processes(processes)
         else:
-            print(f"\n{Colors.WARNING}No processes loaded.{Colors.END}")
+            print(f"\nNo processes loaded.")
         
         print_menu()
         try:
             choice_input = get_string_input("Enter choice: ")
             if choice_input.lower() in ['q', 'quit']:
-                print(f"\n{Colors.GREEN}Exiting program. Goodbye!{Colors.END}")
+                print(f"\nExiting program. Goodbye!")
                 break
             
             choice = int(choice_input)
             if choice == len(SCHEDULERS) + 2:
-                print(f"\n{Colors.GREEN}Exiting program. Goodbye!{Colors.END}")
+                print(f"\nExiting program. Goodbye!")
                 break
             
             if choice == len(SCHEDULERS) + 1:
                 if not processes:
-                    print(f"{Colors.WARNING}No processes loaded. Please input processes first.{Colors.END}")
-                    input(f"{Colors.BLUE}Press Enter to continue...{Colors.END}")
+                    print(f"No processes loaded. Please input processes first.")
+                    input(f"Press Enter to continue...")
                     continue
                 compare_all_schedulers([p.copy() for p in processes])
                 continue
@@ -478,8 +503,8 @@ def main():
                     continue
             
             if not processes:
-                print(f"{Colors.WARNING}No processes available. Please input processes first.{Colors.END}")
-                input(f"{Colors.BLUE}Press Enter to continue...{Colors.END}")
+                print(f"No processes available. Please input processes first.")
+                input(f"Press Enter to continue...")
                 continue
             
             params = get_scheduler_params(scheduler_type)
@@ -490,14 +515,14 @@ def main():
                 compare_all_schedulers([p.copy() for p in processes])
             
         except ValueError:
-            print(f"{Colors.FAIL}Invalid input. Please enter a number or 'q' to quit.{Colors.END}")
-            input(f"{Colors.BLUE}Press Enter to continue...{Colors.END}")
+            print(f"Invalid input. Please enter a number or 'q' to quit.")
+            input(f"Press Enter to continue...")
         except KeyboardInterrupt:
-            print(f"{Colors.WARNING}Operation cancelled by user.{Colors.END}")
-            input(f"{Colors.BLUE}Press Enter to continue...{Colors.END}")
+            print(f"Operation cancelled by user.")
+            input(f"Press Enter to continue...")
         except Exception as e:
-            print(f"{Colors.FAIL}An error occurred: {e}{Colors.END}")
-            input(f"{Colors.BLUE}Press Enter to continue...{Colors.END}")
+            print(f"An error occurred: {e}")
+            input(f"Press Enter to continue...")
 
 if __name__ == "__main__":
     main()
