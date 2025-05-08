@@ -23,15 +23,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# ANSI color codes
-class Colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    GREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
 
 # Define scheduler types
 SCHEDULERS = {
@@ -346,23 +337,6 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
                 print(f"Saved to {filename}")
             except Exception as e:
                 print(f"Error saving file: {e}")
-
-        if get_string_input("Save Gantt chart as PNG? (y/n): ").lower() == 'y':
-            try:
-                fig, ax = plt.subplots(figsize=(10, 4))
-                for p in completed_processes:
-                    if p.completion_time is not None:
-                        start_time = p.completion_time - p.burst_time
-                        ax.barh(f"P{p.id}", p.burst_time, left=start_time, height=0.4)
-                ax.set_xlabel("Time")
-                ax.set_title(f"Gantt Chart - {scheduler_name}")
-                ax.grid(True, alpha=0.3)
-                plot_filename = f"gantt_{uuid.uuid4().hex[:8]}.png"
-                plt.savefig(plot_filename, bbox_inches='tight')
-                plt.close()
-                print(f"Gantt chart saved as {plot_filename}")
-            except Exception as e:
-                print(f"Error generating plot: {e}")
 
         if get_string_input("Save output to text file? (y/n): ").lower() == 'y':
             filename = get_string_input("Filename (no .txt): ") + ".txt"
