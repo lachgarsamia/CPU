@@ -71,6 +71,10 @@ class OutputTee:
         self.terminal.flush()
         self.buffer.flush()
 
+# =============================================
+# Terminal Related Functions
+# =============================================
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -90,6 +94,23 @@ def print_menu():
     print(f"{len(SCHEDULERS) + 2}. Exit")
     print(f"Or type 'q' to quit")
     print("-" * 50)
+
+def progress_bar(seconds: int):
+    bar_length = 30
+    start_time = time.time()
+    while time.time() - start_time < seconds:
+        elapsed = time.time() - start_time
+        progress = elapsed / seconds
+        filled = int(bar_length * progress)
+        bar = '█' * filled + '-' * (bar_length - filled)
+        sys.stdout.write(f'\rRunning scheduler [{bar}] {int(progress * 100)}%')
+        sys.stdout.flush()
+        time.sleep(0.1)
+    sys.stdout.write(f'\rScheduler completed!{" " * 50}\n')
+ 
+# ============================================
+# Scanner Functions (Input Functions)
+# ============================================
 
 def get_int_input(prompt: str, min_val: int = None, max_val: int = None) -> int:
     while True:
@@ -132,6 +153,10 @@ def process_input_options():
     print("3. Load processes from file")
     print("4. Return to main menu")
     return get_int_input("Select an option: ", 1, 4)
+
+# ==============================================
+# Process Related Functions
+# ==============================================
 
 def generate_random_processes() -> List[Process]:
     num_processes = get_int_input("Number of processes [1-20]: ", 1, 20)
@@ -221,7 +246,6 @@ def load_processes_from_file() -> List[Process]:
         print(f"Error loading file: {e}")
         return None
 
-
 def save_processes_to_file(processes: List[Process]):
     if not processes:
         print(f"No processes to save.")
@@ -248,18 +272,9 @@ def display_processes(processes: List[Process]):
         print(f"{p.id:<5} {p.burst_time:<8} {p.priority:<10} {p.arrival_time:<10}")
     print("-" * 60)
 
-def progress_bar(seconds: int):
-    bar_length = 30
-    start_time = time.time()
-    while time.time() - start_time < seconds:
-        elapsed = time.time() - start_time
-        progress = elapsed / seconds
-        filled = int(bar_length * progress)
-        bar = '█' * filled + '-' * (bar_length - filled)
-        sys.stdout.write(f'\rRunning scheduler [{bar}] {int(progress * 100)}%')
-        sys.stdout.flush()
-        time.sleep(0.1)
-    sys.stdout.write(f'\rScheduler completed!{" " * 50}\n')
+# =============================================
+# Scheduler Execution Functions
+# =============================================
 
 def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     if not processes:
@@ -299,7 +314,7 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     
     print(f"Process Details:")
     print("-" * 70)
-    print(f"{'ID':<5} {'Arr':<6} {'Burst':<7} {'Prio':<6} {'Wait':<7} {'Turn':<7} {'Comp':<7}")
+    print(f"{'ID':<5} {'Arrival':<6} {'Burst':<7} {'Priority':<6} {'Waiting':<7} {'Turnaround':<7} {'Completion':<7}")
     print("-" * 70)
     for p in sorted(completed_processes, key=lambda x: x.id):
         print(f"{p.id:<5} {p.arrival_time:<6} {p.burst_time:<7} {p.priority:<6} "
@@ -312,6 +327,7 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     print(f"Avg Turnaround Time: {avg_turnaround_time:.2f} units")
     print(f"Total Execution    : {max_completion_time} units")
     print(f"Throughput         : {(len(completed_processes)/max_completion_time):.4f} processes/unit")
+    print(f"CPU Utilization    : {scheduler.calculate_cpu_usage():.2f} %")
     print("-" * 50)
 
     sys.stdout = original_stdout
@@ -351,6 +367,10 @@ def run_scheduler(scheduler_type: str, processes: List[Process], params: dict):
     
     return metrics
 
+# =============================================
+# Comparison of Algorithms
+# =============================================
+
 def compare_all_schedulers(processes: List[Process]):
     if not processes:
         print(f"No processes to schedule.")
@@ -360,10 +380,9 @@ def compare_all_schedulers(processes: List[Process]):
     all_metrics = {}
     
     time_quantum = get_int_input("Time quantum for Round Robin [default=2]: ", 1) or 2
-    aging_factor = get_int_input("Aging factor for Priority RR [default=1]: ", 1) or 1
     params_store = {
         "rr": {"time_quantum": time_quantum},
-        "rrp": {"time_quantum": time_quantum, "aging_factor": aging_factor}
+        "rrp": {"time_quantum": time_quantum}
     }
     
     for scheduler_type, scheduler_info in SCHEDULERS.items():
@@ -423,6 +442,10 @@ def compare_all_schedulers(processes: List[Process]):
             print(f"Error saving file: {e}")
     
     input(f"\nPress Enter to continue...")
+
+# =============================================
+# Main Function
+# =============================================
 
 def main():
     processes = None

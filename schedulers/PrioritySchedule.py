@@ -29,10 +29,10 @@ class PriorityScheduler:
         Args:
             processes: List of Process objects to schedule
         """
-        self.processes = copy.deepcopy(processes)
-        self.current_time = 0
-        self.execution_log = []  
-        self.gantt_chart = []    
+        self.processes = copy.deepcopy(processes)  # Make a deep copy to preserve original list
+        self.current_time = 0  # Initialize simulation clock
+        self.execution_log = []  # List to keep textual log of events
+        self.gantt_chart = []  # List to represent the Gantt chart (execution timeline)
         
     def run(self) -> List[Process]:
         """
@@ -44,88 +44,85 @@ class PriorityScheduler:
         if not self.processes:
             return []
             
-        self.processes.sort(key=lambda p: p.arrival_time)
+        self.processes.sort(key=lambda p: p.arrival_time)  # Sort processes by arrival time
+        self.current_time = self.processes[0].arrival_time  # Start at first arrival time
         
-        self.current_time = self.processes[0].arrival_time
-        
-        remaining_processes = copy.deepcopy(self.processes)
-        completed_processes = []
+        remaining_processes = copy.deepcopy(self.processes)  # Copy for manipulation
+        completed_processes = []  # List to collect finished processes
         
         while remaining_processes:
+            # Get all processes that have arrived by current time
             available_processes = [p for p in remaining_processes if p.arrival_time <= self.current_time]
             
             if not available_processes:
+                # If no process has arrived yet, CPU stays idle
                 next_arrival = min(p.arrival_time for p in remaining_processes)
                 self.gantt_chart.append(("IDLE", self.current_time, next_arrival))
                 self.execution_log.append(f"Time {self.current_time}: CPU idle until {next_arrival}")
                 self.current_time = next_arrival
                 continue
             
+            # Select process with highest priority (lowest value), breaking ties with arrival time and ID
             selected_process = min(available_processes, key=lambda p: (p.priority, p.arrival_time, p.id))
 
-            
-            selected_process.state = "READY"
+            selected_process.state = "READY"  # Set process state
             selected_process.last_running_time = max(selected_process.arrival_time, self.current_time)
+            selected_process.waiting_time = self.current_time - selected_process.arrival_time  # Calculate waiting time
             
-            selected_process.waiting_time = self.current_time - selected_process.arrival_time
-            
+            # Set response time only the first time the process is picked
             if selected_process.response_time is None:
                 selected_process.response_time = self.current_time - selected_process.arrival_time
             
+            # Log the start of the process
             log_entry = f"Time {self.current_time}: Starting Process {selected_process.id} (priority: {selected_process.priority}, burst time: {selected_process.burst_time})"
             self.execution_log.append(log_entry)
             
             selected_process.state = "RUNNING"
-            time_used = selected_process.execute(selected_process.burst_time)
+            time_used = selected_process.execute(selected_process.burst_time)  # Run the full burst time
             
+            # Record execution in Gantt chart
             self.gantt_chart.append((selected_process.id, self.current_time, self.current_time + time_used))
             
-            self.current_time += time_used
+            self.current_time += time_used  # Advance simulation clock
             
-            selected_process.complete(self.current_time)
+            selected_process.complete(self.current_time)  # Mark as complete
             
+            # Log completion
             log_entry = f"Time {self.current_time}: Completed Process {selected_process.id}"
             self.execution_log.append(log_entry)
             
-            remaining_processes.remove(selected_process)
-            completed_processes.append(selected_process)
+            remaining_processes.remove(selected_process)  # Remove from waiting list
+            completed_processes.append(selected_process)  # Add to completed list
         
-        self.processes = completed_processes
+        self.processes = completed_processes  # Save final state
 
-        write_execution_csv(self.gantt_chart)
+        write_execution_csv(self.gantt_chart)  # Write Gantt chart to CSV
         return self.processes
     
-    def get_statistics(self) -> dict:
+    def calculate_cpu_usage(self) -> float:
         """
-        Calculate and return scheduling statistics.
+        Calculate CPU usage as the percentage of time spent executing processes.
         
         Returns:
-            dict: Various scheduling metrics including average waiting time,
-                 average turnaround time, etc.
+            float: CPU usage as a percentage (0-100)
         """
-        if not self.processes:
-            return {
-                "avg_waiting_time": 0,
-                "avg_turnaround_time": 0,
-                "avg_response_time": 0,
-                "total_execution_time": 0,
-                "throughput": 0
-            }
+        if not self.gantt_chart:
+            return 0.0
         
-        total_waiting_time = sum(p.waiting_time for p in self.processes)
-        total_turnaround_time = sum(p.turnaround_time for p in self.processes)
-        total_response_time = sum(p.response_time for p in self.processes if p.response_time is not None)
-        total_execution_time = max(p.completion_time for p in self.processes) - \
-                               min(p.arrival_time for p in self.processes)
+        # Total simulation duration from first start to last end
+        total_time = self.gantt_chart[-1][2] - self.gantt_chart[0][1]
+        if total_time <= 0:
+            return 0.0
         
-        return {
-            "avg_waiting_time": total_waiting_time / len(self.processes),
-            "avg_turnaround_time": total_turnaround_time / len(self.processes),
-            "avg_response_time": total_response_time / len(self.processes),
-            "total_execution_time": total_execution_time,
-            "throughput": len(self.processes) / total_execution_time if total_execution_time > 0 else 0
-        }
-    
+        # Time when CPU was idle
+        idle_time = sum(end_time - start_time for proc_id, start_time, end_time in self.gantt_chart if proc_id == "IDLE")
+        
+        # Time when CPU was actively processing
+        active_time = total_time - idle_time
+        cpu_usage = (active_time / total_time) * 100
+        
+        return cpu_usage
+
     def print_gantt_chart(self) -> None:
         """Print a simple Gantt chart of the execution sequence."""
         if not self.gantt_chart:
@@ -135,6 +132,7 @@ class PriorityScheduler:
         print("\nGantt Chart:")
         print("-" * 50)
         
+        # Print each segment in Gantt chart
         for proc_id, start_time, end_time in self.gantt_chart:
             duration = end_time - start_time
             if proc_id == "IDLE":
@@ -156,45 +154,3 @@ class PriorityScheduler:
         for entry in self.execution_log:
             print(entry)
         print("-" * 50)
-    
-    def print_results(self) -> None:
-        """Print detailed results of the scheduling."""
-        if not self.processes:
-            print("No processes to display results for.")
-            return
-            
-        print("\nProcess Details:")
-        print("-" * 100)
-        print(f"{'ID':<5} {'Burst Time':<12} {'Priority':<10} {'Arrival':<10} {'Waiting':<10} {'Response':<10} {'Turnaround':<12} {'Completion':<12}")
-        print("-" * 100)
-        
-        sorted_processes = sorted(self.processes, key=lambda p: p.id)
-        for p in sorted_processes:
-            print(f"{p.id:<5} {p.burst_time:<12} {p.priority:<10} {p.arrival_time:<10} {p.waiting_time:<10} {p.response_time:<10} {p.turnaround_time:<12} {p.completion_time:<12}")
-        
-        stats = self.get_statistics()
-        print("\nScheduling Statistics:")
-        print("-" * 50)
-        print(f"Average Waiting Time    : {stats['avg_waiting_time']:.2f} time units")
-        print(f"Average Turnaround Time : {stats['avg_turnaround_time']:.2f} time units")
-        print(f"Average Response Time   : {stats['avg_response_time']:.2f} time units")
-        print(f"Total Execution Time    : {stats['total_execution_time']} time units")
-        print(f"Throughput              : {stats['throughput']:.4f} processes/time unit")
-
-
-def generate_test_processes(num_processes: int = 5, seed: int = None) -> List[Process]:
-    """Generate test processes for demonstration."""
-    if seed is not None:
-        random.seed(seed)
-        
-    processes = []
-    for i in range(1, num_processes + 1):
-        processes.append(Process(
-            id=i,
-            burst_time=random.randint(1, 10),
-            priority=random.randint(1, 5),
-            arrival_time=random.randint(0, 20)
-        ))
-    return processes
-
- 
